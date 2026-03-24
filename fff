@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Caça aos Primos PRO</title>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #0f172a;
+  color: white;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+.info {
+  margin: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 80px);
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.box {
+  background: #1e293b;
+  padding: 20px;
+  cursor: pointer;
+  border-radius: 10px;
+  font-size: 18px;
+  transition: 0.2s;
+}
+
+.box:hover {
+  transform: scale(1.1);
+}
+
+.correct { background: #22c55e; }
+.wrong { background: #ef4444; }
+
+button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #3b82f6;
+  color: white;
+}
+</style>
+
+</head>
+<body>
+
+<h1>🎯 Caça aos Primos PRO</h1>
+
+<div class="info">
+  Pontos: <span id="score">0</span> |
+  Tempo: <span id="time">30</span>s |
+  Combo: <span id="combo">0</span>
+</div>
+
+<div>
+  <button onclick="startGame('easy')">Fácil</button>
+  <button onclick="startGame('medium')">Médio</button>
+  <button onclick="startGame('hard')">Difícil</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<button onclick="startGame(currentLevel)">🔄 Reiniciar</button>
+
+<script>
+let score = 0;
+let time = 30;
+let combo = 0;
+let timer;
+let currentLevel = 'easy';
+
+function isPrime(n) {
+  if (n < 2) return false;
+  for (let i = 2; i <= Math.sqrt(n); i++) {
+    if (n % i === 0) return false;
+  }
+  return true;
+}
+
+function getMax(level) {
+  if (level === 'easy') return 50;
+  if (level === 'medium') return 200;
+  return 500;
+}
+
+function startGame(level) {
+  currentLevel = level;
+  score = 0;
+  combo = 0;
+  time = 30;
+
+  clearInterval(timer);
+  timer = setInterval(() => {
+    time--;
+    document.getElementById("time").innerText = time;
+
+    if (time <= 0) {
+      clearInterval(timer);
+      alert("⏱️ Fim de jogo! Pontuação: " + score);
+    }
+  }, 1000);
+
+  updateUI();
+  generateGame();
+}
+
+function updateUI() {
+  document.getElementById("score").innerText = score;
+  document.getElementById("combo").innerText = combo;
+  document.getElementById("time").innerText = time;
+}
+
+function generateGame() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  let max = getMax(currentLevel);
+
+  for (let i = 0; i < 20; i++) {
+    let num = Math.floor(Math.random() * max);
+
+    let div = document.createElement("div");
+    div.className = "box";
+    div.innerText = num;
+
+    div.onclick = () => {
+      if (time <= 0) return;
+
+      if (isPrime(num)) {
+        div.classList.add("correct");
+        combo++;
+        score += 10 + combo * 2;
+      } else {
+        div.classList.add("wrong");
+        combo = 0;
+        score -= 5;
+      }
+
+      updateUI();
+      setTimeout(generateGame, 300);
+    };
+
+    grid.appendChild(div);
+  }
+}
+</script>
+
+</body>
+</html>
