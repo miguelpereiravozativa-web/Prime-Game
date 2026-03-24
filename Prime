@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caça aos Primos PRO</title>
+    <style>
+        /* Variáveis de Cores e Estilos */
+        :root {
+            --bg-dark: #121214;
+            --bg-panel: #202024;
+            --text-light: #e1e1e6;
+            --primary: #8257e5;
+            --primary-hover: #9466ff;
+            --correct: #00b37e;
+            --wrong: #f75a68;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Cabeçalho e Painel Superior */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(130, 87, 229, 0.3);
+        }
+
+        .stats-panel {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--bg-panel);
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .stats-item span {
+            color: var(--primary);
+        }
+
+        /* Controles (Dificuldade e Modo) */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: var(--bg-panel);
+            color: var(--text-light);
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Grid do Jogo Clássico */
+        #game-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            perspective: 1000px;
+        }
+
+        .number-box {
+            background-color: var(--bg-panel);
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            position: relative;
+            user-select: none;
+        }
+
+        .number-box:hover {
+            transform: scale(1.05);
+            background-color: #2a2a2f;
+            box-shadow: 0 0 15px rgba(130, 87, 229, 0.4);
+        }
+
+        .number-box.correct {
+            background-color: var(--correct);
+            color: #fff;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .number-box.wrong {
+            background-color: var(--wrong);
+            color: #fff;
+            animation: shake 0.4s ease-in-out;
+            pointer-events: none;
+        }
+
+        /* Textos flutuantes de pontuação */
+        .float-text {
+            position: absolute;
+            font-size: 1.2rem;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 10;
+        }
+
+        /* Modo Inteligente */
+        #smart-mode-container {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--bg-panel);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .smart-question {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .smart-prime {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .smart-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .smart-explanation {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #1a1a1a;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            transition: opacity 0.3s;
+        }
+
+        /* Modal Fim de Jogo */
+        #game-over-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--bg-panel);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .modal-content h2 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .modal-content p {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+        }
+
+        .btn-restart {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            width: 100%;
+        }
+
+        .btn-restart:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Animações */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            #game-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+            }
+            .number-box {
+                height: 60px;
+                font-size: 1.4rem;
+            }
+            .stats-panel {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Caça aos Primos PRO</h1>
+        
+        <div class="stats-panel">
+            <div class="stats-item">Tempo: <span id="timer">30</span>s</div>
+            <div class="stats-item">Pontos: <span id="score">0</span></div>
+            <div class="stats-item">Combo: <span id="combo">0</span>x</div>
+        </div>
+
+        <div class="controls">
+            <button class="diff-btn active" data-max="50">Fácil (50)</button>
+            <button class="diff-btn" data-max="200">Médio (200)</button>
+            <button class="diff-btn" data-max="500">Difícil (500)</button>
+        </div>
+        <div class="controls">
+            <button id="mode-classic" class="active">Modo Clássico</button>
+            <button id="mode-smart">Modo Inteligente</button>
+        </div>
+    </header>
+
+    <div id="game-grid">
+        </div>
+
+    <div id="smart-mode-container">
+        <div class="smart-question">O número base é:</div>
+        <div class="smart-prime" id="smart-base-number">7</div>
+        <p style="margin-bottom: 15px;">Qual das opções abaixo tem a MAIOR chance de ser primo?</p>
+        <div class="smart-options" id="smart-options">
+            </div>
+        <div class="smart-explanation" id="smart-explanation">
+            Faça sua escolha para ver a explicação matemática!
+        </div>
+    </div>
+
+    <div id="game-over-modal">
+        <div class="modal-content">
+            <h2>Fim de Jogo!</h2>
+            <p>Sua pontuação final:<br><strong style="font-size: 2.5rem; color: var(--correct);" id="final-score">0</strong></p>
+            <button class="btn-restart" id="btn-restart">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIÁVEIS DE ESTADO ---
+        let score = 0;
+        let combo = 0;
+        let timeLeft = 30;
+        let timerInterval;
+        let difficultyMax = 50;
+        let isSmartMode = false;
+        let isGameRunning = false;
+
+        // --- ELEMENTOS DO DOM ---
+        const timerEl = document.getElementById('timer');
+        const scoreEl = document.getElementById('score');
+        const comboEl = document.getElementById('combo');
+        const gameGrid = document.getElementById('game-grid');
+        const modal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const btnRestart = document.getElementById('btn-restart');
+        
+        const diffBtns = document.querySelectorAll('.diff-btn');
+        const btnClassic = document.getElementById('mode-classic');
+        const btnSmart = document.getElementById('mode-smart');
+        
+        const smartContainer = document.getElementById('smart-mode-container');
+        const smartBaseNumberEl = document.getElementById('smart-base-number');
+        const smartOptionsEl = document.getElementById('smart-options');
+        const smartExplanationEl = document.getElementById('smart-explanation');
+
+        // --- LÓGICA MATEMÁTICA ---
+        
+        // Função eficiente para checar se é primo
+        function isPrime(num) {
+            if (num <= 1) return false;
+            if (num <= 3) return true;
+            // Elimina múltiplos de 2 e 3 rápido
+            if (num % 2 === 0 || num % 3 === 0) return false;
+            // Checa apenas números da forma 6k ± 1 até a raiz quadrada
+            for (let i = 5; i * i <= num; i += 6) {
+                if (num % i === 0 || num % (i + 2) === 0) return false;
+            }
+            return true;
+        }
+
+        // Gera número aleatório até max
+        function getRandomNumber(max) {
+            return Math.floor(Math.random() * max) + 1;
+        }
+
+        // Gera número garantindo proporção de primos para jogabilidade
+        function generatePlayableNumber(max) {
+            // 30% de chance de forçar a geração de um número primo
+            if (Math.random() < 0.3) {
+                let p;
+                do { p = getRandomNumber(max); } while (!isPrime(p));
+                return p;
+            }
+            return getRandomNumber(max);
+        }
+
+        // --- SISTEMA DE JOGO ---
+
+        function startGame() {
+            // Reset de variáveis
+            score = 0;
+            combo = 0;
+            timeLeft = 30;
+            isGameRunning = true;
+            
+            updateUI();
+            modal.style.display = 'none';
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+
+            if (isSmartMode) {
+                gameGrid.style.display = 'none';
+                smartContainer.style.display = 'block';
+                setupSmartRound();
+            } else {
+                smartContainer.style.display = 'none';
+                gameGrid.style.display = 'grid';
+                initGrid();
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(timerInterval);
+            finalScoreEl.textContent = score;
+            modal.style.display = 'flex';
+        }
+
+        function updateUI() {
+            scoreEl.textContent = score;
+            comboEl.textContent = combo;
+            timerEl.textContent = timeLeft;
+        }
+
+        // --- MODO CLÁSSICO ---
+
+        function initGrid() {
+            gameGrid.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                createGridBox();
+            }
+        }
+
+        function createGridBox() {
+            const box = document.createElement('div');
+            box.className = 'number-box';
+            
+            const num = generatePlayableNumber(difficultyMax);
+            box.textContent = num;
+            
+            box.addEventListener('click', () => handleBoxClick(box, num));
+            gameGrid.appendChild(box);
+        }
+
+        function handleBoxClick(box, num) {
+            if (!isGameRunning || box.classList.contains('clicked')) return;
+            box.classList.add('clicked'); // Evita duplo clique rápido
+
+            if (isPrime(num)) {
+                combo++;
+                const points = 10 + (combo * 2);
+                score += points;
+                box.classList.add('correct');
+                showFloatingText(box, `+${points}`, '#00b37e');
+                
+                // Atualiza a caixa após um breve atraso
+                setTimeout(() => {
+                    if(!isGameRunning) return;
+                    const newNum = generatePlayableNumber(difficultyMax);
+                    box.textContent = newNum;
+                    box.classList.remove('clicked', 'correct');
+                    // Remove listeners antigos substituindo o clone
+                    const newBox = box.cloneNode(true);
+                    newBox.addEventListener('click', () => handleBoxClick(newBox, newNum));
+                    box.parentNode.replaceChild(newBox, box);
+                }, 400);
+
+            } else {
+                combo = 0;
+                score -= 5;
+                box.classList.add('wrong');
+                showFloatingText(box, `-5`, '#f75a68');
+                
+                setTimeout(() => {
+                    if(!isGameRunning) return;
+                    box.classList.remove('clicked', 'wrong');
+                }, 400);
+            }
+            updateUI();
+        }
+
+        // --- MODO INTELIGENTE ---
+
+        function setupSmartRound() {
+            smartExplanationEl.textContent = "Faça sua escolha para ver a explicação matemática!";
+            smartExplanationEl.style.color = "var(--text-light)";
+            smartOptionsEl.innerHTML = '';
+
+            // Gera um número primo base
+            let p;
+            do { p = getRandomNumber(difficultyMax); } while (!isPrime(p));
+            smartBaseNumberEl.textContent = p;
+
+            // Opções: P+1, P+2, P+4, P+6
+            const increments = [1, 2, 4, 6];
+            
+            // Embaralha as opções para não ficarem sempre na mesma ordem
+            increments.sort(() => Math.random() - 0.5);
+
+            increments.forEach(inc => {
+                const optNum = p + inc;
+                const btn = document.createElement('button');
+                btn.className = 'number-box';
+                btn.style.height = '60px';
+                btn.textContent = optNum;
+                btn.addEventListener('click', () => handleSmartClick(optNum, p, inc, btn));
+                smartOptionsEl.appendChild(btn);
+            });
+        }
+
+        function handleSmartClick(optNum, baseNum, increment, btn) {
+            if (!isGameRunning) return;
+            
+            // Desabilita os botões para evitar múltiplos cliques
+            Array.from(smartOptionsEl.children).forEach(b => b.style.pointerEvents = 'none');
+
+            const isCorrect = isPrime(optNum);
+
+            if (isCorrect) {
+                combo++;
+                const points = 15 + (combo * 3); // Dá mais pontos por exigir pensamento
+                score += points;
+                btn.classList.add('correct');
+                
+                let text = `Correto! `;
+                if (increment === 2) text += `${baseNum} e ${optNum} são Primos Gêmeos!`;
+                else if (increment === 4) text += `${baseNum} e ${optNum} são Primos Primos (Cousin Primes)!`;
+                else if (increment === 6) text += `${baseNum} e ${optNum} são Primos Sexy (Distância 6)!`;
+                
+                smartExplanationEl.innerHTML = `<strong>${text}</strong>`;
+                smartExplanationEl.style.color = "var(--correct)";
+
+            } else {
+                combo = 0;
+                score -= 5;
+                btn.classList.add('wrong');
+                
+                let text = `Incorreto. `;
+                if (increment === 1) {
+                    text += `Se o primo não for 2, somar 1 sempre resultará em um número PAR, que não é primo!`;
+                } else {
+                    text += `${optNum} é divisível por outros números.`;
+                }
+                
+                smartExplanationEl.innerHTML = `<strong>${text}</strong>`;
+                smartExplanationEl.style.color = "var(--wrong)";
+            }
+
+            updateUI();
+
+            // Avança para a próxima rodada do modo inteligente após leitura
+            setTimeout(() => {
+                if(isGameRunning) setupSmartRound();
+            }, 2500);
+        }
+
+        // --- UTILITÁRIOS ---
+
+        function showFloatingText(element, text, color) {
+            const floatEl = document.createElement('div');
+            floatEl.className = 'float-text';
+            floatEl.textContent = text;
+            floatEl.style.color = color;
+            
+            // Posicionamento relativo à caixa
+            const rect = element.getBoundingClientRect();
+            floatEl.style.left = '50%';
+            floatEl.style.top = '10%';
+            floatEl.style.transform = 'translate(-50%, -50%)';
+            
+            element.appendChild(floatEl);
+            
+            setTimeout(() => floatEl.remove(), 800);
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // Dificuldade
+        diffBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                diffBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                difficultyMax = parseInt(e.target.getAttribute('data-max'));
+                startGame(); // Reinicia com nova dificuldade
+            });
+        });
+
+        // Modos
+        btnClassic.addEventListener('click', () => {
+            if(isSmartMode) {
+                isSmartMode = false;
+                btnClassic.classList.add('active');
+                btnSmart.classList.remove('active');
+                startGame();
+            }
+        });
+
+        btnSmart.addEventListener('click', () => {
+            if(!isSmartMode) {
+                isSmartMode = true;
+                btnSmart.classList.add('active');
+                btnClassic.classList.remove('active');
+                startGame();
+            }
+        });
+
+        // Restart Modal
+        btnRestart.addEventListener('click', startGame);
+
+        // --- INICIALIZAÇÃO ---
+        startGame();
+
+    </script>
+</body>
+</html>
