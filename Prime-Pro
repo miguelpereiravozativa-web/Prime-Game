@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake dos Primos</title>
+    <style>
+        /* === VARIÁVEIS DE CORES E ESTILO === */
+        :root {
+            --bg-dark: #0d0d0f;
+            --bg-panel: #1a1a1e;
+            --text-main: #e1e1e6;
+            --primary: #00b37e;
+            --primary-hover: #008f64;
+            --danger: #f75a68;
+            --food-bg: #8257e5;
+            --grid-line: rgba(255, 255, 255, 0.05);
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* === RESET E BASE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none; /* Evita scroll no mobile ao jogar */
+        }
+
+        /* === CONTAINERS E TELAS === */
+        #app {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+
+        .screen {
+            background-color: var(--bg-panel);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+            display: none; /* Escondido por padrão */
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .screen.active {
+            display: flex; /* Mostra a tela ativa */
+        }
+
+        /* === TELA INICIAL === */
+        h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 179, 126, 0.3);
+        }
+
+        .explanation {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--primary);
+        }
+
+        .explanation strong {
+            color: var(--primary);
+        }
+
+        .rules {
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .rules ul {
+            list-style-type: none;
+            margin-top: 10px;
+        }
+
+        .rules li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .rules li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        /* === BOTÕES === */
+        button {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        /* === TELA DO JOGO === */
+        #game-ui {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background-color: var(--bg-panel);
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .ui-item span {
+            color: var(--primary);
+        }
+
+        #canvas-container {
+            position: relative;
+            background-color: #000;
+            border: 2px solid var(--bg-panel);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* === CONTROLES MOBILE === */
+        #mobile-controls {
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        .d-pad-btn {
+            background-color: var(--bg-panel);
+            border: 2px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 15px;
+            font-size: 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        .d-pad-btn:active {
+            background-color: var(--primary);
+        }
+
+        #btn-up { grid-column: 2; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+
+        /* === TELA DE GAME OVER === */
+        #final-score {
+            font-size: 3rem;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .death-reason {
+            color: var(--danger);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: grid; /* Mostra controles no mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div id="start-screen" class="screen active">
+            <h1>Snake dos Primos</h1>
+            
+            <div class="explanation">
+                <strong>O que é um número primo?</strong><br>
+                Um número natural maior que 1 que possui exatamente dois divisores: 1 e ele mesmo.<br><br>
+                <em>Exemplos: 2, 3, 5, 7 são primos.</em><br>
+                <em>Exemplos: 4, 6, 8 NÃO são primos.</em>
+            </div>
+
+            <div class="rules">
+                <strong>REGRAS:</strong>
+                <ul>
+                    <li>Coma apenas números primos para crescer e ganhar pontos (+10).</li>
+                    <li>Se comer número errado, você diminui de tamanho e perde pontos (-5).</li>
+                    <li>Se ficar com tamanho zero ou bater na parede/corpo, GAME OVER.</li>
+                    <li>Quanto mais você acerta, maior fica sua cobra!</li>
+                </ul>
+            </div>
+
+            <button id="btn-start">Iniciar Jogo</button>
+        </div>
+
+        <div id="game-screen" class="screen" style="background: transparent; box-shadow: none; padding: 0;">
+            <div id="game-ui">
+                <div class="ui-item">Pontos: <span id="score-display">0</span></div>
+                <div class="ui-item">Tamanho: <span id="size-display">3</span></div>
+            </div>
+            
+            <div id="canvas-container">
+                <canvas id="gameCanvas" width="360" height="360"></canvas>
+            </div>
+
+            <div id="mobile-controls">
+                <div class="d-pad-btn" id="btn-up">↑</div>
+                <div class="d-pad-btn" id="btn-left">←</div>
+                <div class="d-pad-btn" id="btn-down">↓</div>
+                <div class="d-pad-btn" id="btn-right">→</div>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="screen">
+            <h1 style="color: var(--danger);">Fim de Jogo</h1>
+            <p class="death-reason" id="death-reason">Você bateu!</p>
+            <div>
+                <p>Sua pontuação final foi:</p>
+                <div id="final-score">0</div>
+            </div>
+            <button id="btn-restart">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * LÓGICA DO JOGO - SNAKE DOS PRIMOS
+         */
+
+        // Elementos DOM
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const btnStart = document.getElementById('btn-start');
+        const btnRestart = document.getElementById('btn-restart');
+        const scoreDisplay = document.getElementById('score-display');
+        const sizeDisplay = document.getElementById('size-display');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const deathReasonDisplay = document.getElementById('death-reason');
+        
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 30; // Tamanho de cada bloco (360/30 = 12x12 grid)
+        const tileCount = canvas.width / gridSize;
+
+        // Variáveis de Estado do Jogo
+        let snake = [];
+        let dx = 0;
+        let dy = 0;
+        let food = { x: 0, y: 0, value: 0 };
+        let score = 0;
+        let gameInterval;
+        let isGameOver = false;
+        const gameSpeed = 160; // milissegundos por frame
+
+        // Função Matemática: Verifica se é primo de forma eficiente
+        function isPrime(num) {
+            if (num <= 1) return false;
+            if (num <= 3) return true;
+            if (num % 2 === 0 || num % 3 === 0) return false;
+            for (let i = 5; i * i <= num; i += 6) {
+                if (num % i === 0 || num % (i + 2) === 0) return false;
+            }
+            return true;
+        }
+
+        // Gera número aleatório
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Troca de Telas
+        function showScreen(screenElement) {
+            startScreen.classList.remove('active');
+            gameScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            screenElement.classList.add('active');
+        }
+
+        // Inicializa/Reinicia o jogo
+        function initGame() {
+            // Posição inicial da cobra (centro)
+            snake = [
+                { x: 6, y: 6 },
+                { x: 6, y: 7 },
+                { x: 6, y: 8 }
+            ];
+            
+            // Direção inicial (cima)
+            dx = 0;
+            dy = -1;
+            
+            score = 0;
+            isGameOver = false;
+            
+            updateUI();
+            spawnFood();
+            
+            showScreen(gameScreen);
+            
+            // Limpa intervalo anterior se existir e começa novo
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, gameSpeed);
+        }
+
+        // Loop principal do jogo
+        function gameLoop() {
+            if (isGameOver) return;
+            update();
+            draw();
+        }
+
+        // Atualiza lógica (movimento, colisões)
+        function update() {
+            // Calcula nova posição da cabeça
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // Verifica colisão com paredes
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                triggerGameOver("Você bateu na parede!");
+                return;
+            }
+
+            // Verifica colisão com próprio corpo
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    triggerGameOver("Você mordeu o próprio corpo!");
+                    return;
+                }
+            }
+
+            // Move a cobra inserindo nova cabeça
+            snake.unshift(head);
+
+            // Verifica se comeu a comida (o número)
+            if (head.x === food.x && head.y === food.y) {
+                handleFoodEaten();
+            } else {
+                // Movimento normal: remove a cauda
+                snake.pop();
+            }
+
+            // Verifica se o tamanho chegou a zero após comer número errado
+            if (snake.length === 0) {
+                triggerGameOver("Seu tamanho chegou a zero!");
+            }
+        }
+
+        // Lógica ao comer o número
+        function handleFoodEaten() {
+            if (isPrime(food.value)) {
+                // ACERTOU: Cresce (já cresceu pelo unshift sem pop) e ganha pontos
+                score += 10;
+            } else {
+                // ERROU: Perde pontos e diminui tamanho
+                score -= 5;
+                // Remove a cauda extra para diminuir o tamanho além do movimento normal
+                snake.pop(); 
+                snake.pop(); // Remove mais um bloco (diminui)
+            }
+            
+            updateUI();
+            spawnFood();
+        }
+
+        // Gera nova comida garantindo que não caia no corpo da cobra
+        function spawnFood() {
+            let validPosition = false;
+            while (!validPosition) {
+                food.x = getRandomInt(0, tileCount - 1);
+                food.y = getRandomInt(0, tileCount - 1);
+                
+                validPosition = true;
+                for (let segment of snake) {
+                    if (segment.x === food.x && segment.y === food.y) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+            }
+            
+            // Define valor do número (1 a 100)
+            // 40% de chance de forçar um número primo para balancear a jogabilidade
+            if (Math.random() < 0.4) {
+                let p;
+                do { p = getRandomInt(1, 100); } while (!isPrime(p));
+                food.value = p;
+            } else {
+                food.value = getRandomInt(1, 100);
+            }
+        }
+
+        // Atualiza interface de pontos
+        function updateUI() {
+            scoreDisplay.textContent = score;
+            sizeDisplay.textContent = snake.length;
+        }
+
+        // Fim de jogo
+        function triggerGameOver(reason) {
+            isGameOver = true;
+            clearInterval(gameInterval);
+            deathReasonDisplay.textContent = reason;
+            finalScoreDisplay.textContent = score;
+            setTimeout(() => showScreen(gameOverScreen), 500); // Pequeno delay
+        }
+
+        // Renderiza elementos no Canvas
+        function draw() {
+            // Fundo do Canvas (Grid Style)
+            ctx.fillStyle = '#0d0d0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Desenha linhas do grid (opcional, visualização)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            for(let i=0; i<tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i*gridSize, 0);
+                ctx.lineTo(i*gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i*gridSize);
+                ctx.lineTo(canvas.width, i*gridSize);
+                ctx.stroke();
+            }
+
+            // Desenha a Cobra
+            snake.forEach((segment, index) => {
+                // Cabeça mais clara, corpo padrão
+                ctx.fillStyle = index === 0 ? '#00e6a1' : 'var(--primary)';
+                
+                // Pequena margem para dar efeito de blocos
+                ctx.fillRect(segment.x * gridSize + 1, segment.y * gridSize + 1, gridSize - 2, gridSize - 2);
+            });
+
+            // Desenha a Comida (Número)
+            ctx.fillStyle = 'var(--food-bg)';
+            ctx.beginPath();
+            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Escreve o número dentro do círculo
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(food.value, food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2);
+        }
+
+        // === CONTROLES ===
+
+        function changeDirection(newDx, newDy) {
+            if (isGameOver) return;
+            // Previne que a cobra ande de ré diretamente
+            if (dx === 0 && newDx === 0) return; // Já está na vertical
+            if (dy === 0 && newDy === 0) return; // Já está na horizontal
+            
+            dx = newDx;
+            dy = newDy;
+        }
+
+        // Teclado (Desktop)
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    changeDirection(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    changeDirection(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    changeDirection(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    changeDirection(1, 0);
+                    break;
+            }
+        });
+
+        // Botões Mobile
+        document.getElementById('btn-up').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, -1); });
+        document.getElementById('btn-down').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, 1); });
+        document.getElementById('btn-left').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(-1, 0); });
+        document.getElementById('btn-right').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(1, 0); });
+
+        // Eventos dos Botões de Tela
+        btnStart.addEventListener('click', initGame);
+        btnRestart.addEventListener('click', initGame);
+
+        // Renderiza tela inicial vazia
+        draw();
+
+    </script>
+</body>
+</html>
